@@ -1,0 +1,288 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Boundary Layer Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;600;800&family=Chivo+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="style.css">
+
+<div class="wrap">
+  <header class="top">
+    <div class="lead">
+      <button class="sbtoggle" id="bSide" type="button" aria-controls="sidebar" aria-expanded="true" aria-label="Hide controls">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><line class="bar" x1="5" y1="2.5" x2="5" y2="13.5"/></svg>
+        <span>Controls</span>
+      </button>
+      <div class="brand">
+        <h1>Boundary Layer <span>Lab</span></h1>
+        <p>Flat plate · zero pressure gradient · Blasius (laminar) + 1/7-power law (turbulent)</p>
+      </div>
+    </div>
+    <div class="chips"><span class="chip" id="chipRegime">LAMINAR</span><span class="chip" id="chipRe">Re_L —</span><span class="chip warn" id="chipWarn" hidden>LOW Re: THEORY LIMIT</span></div>
+  </header>
+  <nav class="tabs" aria-label="Views">
+    <a href="#simulation" id="tabSim" aria-current="page">Simulation</a>
+    <a href="#equations" id="tabEq">Equations &amp; Calculations</a>
+    <a href="#theory" id="tabTh">Theory &amp; Background</a>
+  </nav>
+
+  <div id="viewSim">
+  <div class="sb-backdrop" id="sbBackdrop" hidden></div>
+  <div class="bench">
+    <div class="sidebar" id="sidebar">
+    <div class="sbclose"><button class="btn" id="bSideClose" type="button">Close ✕</button></div>
+    <aside class="controls" aria-label="Simulation parameters">
+      <div class="ctl">
+        <span class="lbl">Fluid</span>
+        <div class="seg" id="fluidSeg">
+          <button type="button" data-f="air" aria-pressed="true">Air</button>
+          <button type="button" data-f="water" aria-pressed="false">Water</button>
+          <button type="button" data-f="glycerin" aria-pressed="false">Glycerin</button>
+        </div>
+        <span class="lbl" id="fluidProps" style="text-transform:none;letter-spacing:0">ν = 1.516e-5 m²/s · ρ = 1.204 kg/m³</span>
+      </div>
+      <div class="ctl">
+        <div class="row"><label class="lbl" for="sU">Free-stream speed U∞</label><output id="oU">5.00 m/s</output></div>
+        <input type="range" id="sU" min="0" max="1000" step="1">
+      </div>
+      <div class="ctl">
+        <div class="row"><label class="lbl" for="sL">Plate length L</label><output id="oL">1.00 m</output></div>
+        <input type="range" id="sL" min="0.1" max="3" step="0.05">
+      </div>
+      <div class="ctl">
+        <div class="row"><label class="lbl" for="sRc">Critical Re (transition)</label><output id="oRc">5.0×10⁵</output></div>
+        <input type="range" id="sRc" min="0" max="1000" step="1">
+      </div>
+      <div class="ctl">
+        <div class="row"><label class="lbl" for="sX">Inspect station x / L</label><output id="oX">0.60</output></div>
+        <input type="range" id="sX" min="0.01" max="1" step="0.01">
+        <span class="lbl" style="text-transform:none;letter-spacing:0">Or click anywhere on the plate.</span>
+      </div>
+      <hr>
+      <div class="toggles">
+        <label><input type="checkbox" id="tTr" checked> Tracers</label>
+        <label><input type="checkbox" id="tPr" checked> Profiles</label>
+        <label><input type="checkbox" id="tEn" checked> δ envelope</label>
+        <label><input type="checkbox" id="tCu" checked> Cubic approx.</label>
+      </div>
+      <div class="btns">
+        <button class="btn" id="bPlay" type="button">Pause</button>
+        <button class="btn" id="bView" type="button">Reset view</button>
+        <button class="btn" id="bReset" type="button">Reset all</button>
+      </div>
+      <hr>
+      <div class="ctl">
+        <span class="lbl">Demo presets</span>
+        <div class="presets">
+          <button class="preset" type="button" data-p="lam">Laminar only</button>
+          <button class="preset" type="button" data-p="tr">Transition on plate</button>
+          <button class="preset" type="button" data-p="water">Water, slow</button>
+          <button class="preset" type="button" data-p="low">Low-Re limit</button>
+        </div>
+      </div>
+    </aside>
+    </div>
+
+    <section class="view" aria-label="3D view of flow over a flat plate">
+      <div id="three"></div>
+      <div class="hud tl"><span>Vertical scale <b id="hExag">×—</b></span><span>Plate grid = L/10</span><span>Drag to rotate · scroll to zoom · click plate to inspect</span></div>
+      <div class="hud br"><span>u / U∞</span><div class="cbar"></div><div class="cbar-l"><span>0</span><span>0.5</span><span>1.0</span></div></div>
+      <div class="tag le" id="tagLE">Leading edge x = 0</div>
+      <div class="tag trn" id="tagTR" hidden>Transition</div>
+      <div class="tag flow" id="tagFlow">U∞ →</div>
+    </section>
+
+    <div class="gauges">
+    <div class="card">
+      <div class="row" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><h2>Velocity profile at station</h2><span class="lbl" id="profX">x = —</span></div>
+      <div class="plot"><canvas id="cProf" aria-label="Velocity profile graph"></canvas></div>
+      <div class="legend"><span><i style="border-color:var(--amber)"></i><span id="lgMain">Blasius (RK4 solution)</span></span><span id="lgCub"><i style="border-color:var(--cyan);border-top-style:dashed"></i>Cubic polynomial</span><span><i style="border-color:var(--muted);border-top-style:dotted"></i>δ₉₉</span></div>
+    </div>
+    <div class="card">
+      <h2>Layer growth along the plate</h2>
+      <div class="plot"><canvas id="cGrow" aria-label="Boundary layer thickness versus distance graph"></canvas></div>
+      <div class="legend"><span><i style="border-color:var(--cyan)"></i>δ₉₉ thickness</span><span><i style="border-color:var(--muted);border-top-style:dashed"></i>δ* displacement</span><span><i style="border-color:var(--red);border-top-style:dashed"></i>transition</span><span><i style="border-color:var(--amber)"></i>station</span></div>
+    </div>
+    </div>
+  </div>
+
+  <div class="lower">
+    <div class="card">
+      <h2>Readout</h2>
+      <div class="rgrid"><table><tbody id="tbl"></tbody></table><table><tbody id="tbl2"></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <section>
+      <h3>What you are seeing</h3>
+      <p>Fluid sticks to the plate surface (no-slip condition), so speed is zero at the wall. A thin layer forms where speed rises from zero to the free-stream value. This layer is the boundary layer. It grows thicker along the plate. Past the critical Reynolds number it becomes turbulent and grows much faster.</p>
+      <p>Coloured tracers move at the local speed u(x, y). Arrows show the velocity profile at fixed stations. The translucent sheet marks δ₉₉, where u reaches 99% of U∞.</p>
+      <p>Every formula, with worked steps, is on the Equations &amp; Calculations tab.</p>
+    </section>
+    <section>
+      <h3>Assumptions and limits</h3>
+      <ul>
+        <li>Steady, incompressible, 2D flow over a smooth plate with zero pressure gradient.</li>
+        <li>The Blasius equation is solved in the page with RK4 (f″(0) = 0.332057).</li>
+        <li>Turbulent formulas assume turbulence from the leading edge, so δ jumps at transition. A real transition happens over a short zone.</li>
+        <li>Tracer wobble in the turbulent zone is illustrative. Turbulence is not resolved.</li>
+        <li>Boundary-layer theory needs δ ≪ x. Below Re_L ≈ 1000 the results are not reliable.</li>
+        <li>Fluid properties at 20 °C. Values are textbook figures; verify against your course tables.</li>
+      </ul>
+    </section>
+  </div>
+  </div><!-- /viewSim -->
+
+  <div id="viewEq" hidden>
+    <div class="eqgrid">
+      <section class="card eqin" aria-labelledby="hIn">
+        <h2 id="hIn">1 · Input parameters</h2>
+        <div class="seg two" id="modeSeg">
+          <button type="button" data-m="live" aria-pressed="true">Use simulation values</button>
+          <button type="button" data-m="manual" aria-pressed="false">Manual calculation</button>
+        </div>
+        <p class="hint" id="modeHint"></p>
+        <div class="fields">
+          <label for="eFluid">Fluid (20 °C)
+            <select id="eFluid"><option value="air">Air</option><option value="water">Water</option><option value="glycerin">Glycerin</option></select></label>
+          <label for="eU">Free-stream speed U∞ (m/s)<input id="eU" type="number" min="0" step="any" inputmode="decimal"></label>
+          <label for="eL">Plate length L (m)<input id="eL" type="number" min="0" step="any" inputmode="decimal"></label>
+          <label for="eX">Distance from leading edge x (m)<input id="eX" type="number" min="0" step="any" inputmode="decimal"></label>
+          <label for="eRc">Critical Reynolds number Re_cr<input id="eRc" type="number" min="0" step="any" inputmode="decimal"></label>
+          <label for="eY">Height above plate y (mm)<input id="eY" type="number" min="0" step="any" inputmode="decimal" value="2"></label>
+        </div>
+        <button class="btn" id="bCopy" type="button" hidden>Copy simulation values</button>
+        <div class="props" id="eProps"></div>
+        <p class="err" id="eErr" role="alert" hidden></p>
+        <a class="btn back" href="#simulation">← Back to Simulation</a>
+      </section>
+      <div class="eqcol" id="eqOut" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div id="viewTh" hidden>
+    <div class="thgrid">
+      <section class="card th">
+        <h2>A · The experiment</h2>
+        <p>Fluid flows over a thin, smooth flat plate at speed U<sub>∞</sub>. At the plate surface the fluid speed is zero because of the <strong class="kw">no-slip condition</strong>. Above the surface, the speed rises smoothly until it reaches U<sub>∞</sub>.</p>
+        <p>The thin region where this change happens is the <strong class="kw">boundary layer</strong>. It starts at zero thickness at the leading edge and grows thicker along the plate, because viscosity slows more and more fluid.</p>
+      </section>
+
+      <section class="card th">
+        <h2>B · Scientific principles</h2>
+        <dl class="dl">
+          <dt>No-slip condition</dt><dd>Fluid in contact with a stationary wall has zero velocity relative to it: u = v = 0 at y = 0.</dd>
+          <dt>Conservation of mass</dt><dd>For incompressible 2D flow: <span class="eqn in">∂u/∂x + ∂v/∂y = 0</span></dd>
+          <dt>Conservation of momentum</dt><dd>The Navier–Stokes equations: <span class="eqn in">ρ(∂<b>u</b>/∂t + <b>u</b>·∇<b>u</b>) = −∇p + μ∇²<b>u</b></span>. Inside a thin layer with zero pressure gradient, Prandtl's simplification gives <span class="eqn in">u ∂u/∂x + v ∂u/∂y = ν ∂²u/∂y²</span></dd>
+          <dt>Reynolds number</dt><dd>The ratio of inertial to viscous effects. It tells you how thick the layer is relative to x and whether the flow is laminar or turbulent.</dd>
+        </dl>
+      </section>
+
+      <section class="card th">
+        <h2>C · Scientists</h2>
+        <dl class="dl">
+          <dt>Ludwig Prandtl (1904)</dt><dd>Introduced boundary-layer theory. He showed that viscous effects matter only in a thin layer near the surface, so the outer flow can be treated separately as nearly inviscid.</dd>
+          <dt>Paul Richard Heinrich Blasius (1908)</dt><dd>Prandtl's student. He found the similarity solution for the laminar boundary layer on a flat plate, which this simulation solves numerically.</dd>
+          <dt>Theodore von Kármán</dt><dd>Derived the momentum integral equation (1921), the basis of approximate methods such as the cubic profile shown here. He also made major contributions to turbulent boundary-layer theory.</dd>
+        </dl>
+      </section>
+
+      <section class="card th wide">
+        <h2>D · Equations used in this simulation</h2>
+        <p class="lede">x = distance from the leading edge (m) · L = plate length (m) · U<sub>∞</sub> = free-stream speed (m/s) · ν = kinematic viscosity (m²/s) · y = height above the plate (m). These are classical solutions and empirical correlations for the assumptions in section F, not laws that hold for every flow.</p>
+        <div class="thq">
+          <div><div class="eqn">Re<sub>x</sub> = <span class="fr"><span>U<sub>∞</sub> x</span><span>ν</span></span></div><p>Local Reynolds number at distance x.</p></div>
+          <div><div class="eqn">Re<sub>L</sub> = <span class="fr"><span>U<sub>∞</sub> L</span><span>ν</span></span></div><p>Plate Reynolds number, used for the average drag coefficient.</p></div>
+          <div><div class="eqn">δ<sub>99</sub> ≈ <span class="fr"><span>4.91 x</span><span><span class="rt">√<span>Re<sub>x</sub></span></span></span></span></div><p><strong class="kw">Boundary-layer thickness</strong>: the height where u = 0.99 U<sub>∞</sub>. Laminar, from the Blasius solution. Some books round 4.91 to 5.0.</p></div>
+          <div><div class="eqn">δ* = <span class="fr"><span>1.721 x</span><span><span class="rt">√<span>Re<sub>x</sub></span></span></span></span></div><p>Displacement thickness (laminar): how far the outer flow is pushed away by the slow layer.</p></div>
+          <div><div class="eqn">θ = <span class="fr"><span>0.664 x</span><span><span class="rt">√<span>Re<sub>x</sub></span></span></span></span></div><p>Momentum thickness (laminar): the momentum lost to wall friction, linked to drag.</p></div>
+          <div><div class="eqn">δ ≈ <span class="fr"><span>0.37 x</span><span>Re<sub>x</sub><sup>1/5</sup></span></span></div><p>Turbulent thickness. An empirical correlation that assumes turbulent flow from the leading edge.</p></div>
+          <div><div class="eqn">u/U<sub>∞</sub> = f′(η), &nbsp;η = y<span class="rt">√<span>U<sub>∞</sub>/νx</span></span></div><p>Laminar profile: the Blasius solution of f‴ + ½ f f″ = 0, solved in the page with RK4.</p></div>
+          <div><div class="eqn">u/U<sub>∞</sub> ≈ (y/δ)<sup>1/7</sup></div><p>Turbulent profile: the empirical one-seventh-power law. It fits the outer part of the layer well but not the region very close to the wall.</p></div>
+        </div>
+      </section>
+
+      <section class="card th wide">
+        <h2>Blasius solution (laminar) and 1/7-power law (turbulent)</h2>
+        <div class="bcmp">
+          <div>
+            <h3>Blasius solution · laminar boundary layer</h3>
+            <p>Describes the steady, two-dimensional <strong class="kw">laminar</strong> boundary layer on a smooth flat plate with zero pressure gradient. It is a classical <strong class="kw">similarity solution</strong> of Prandtl's boundary-layer equations: the profile has the same shape at every x once y is scaled with √(νx/U<sub>∞</sub>).</p>
+            <div class="eqn">η = y<span class="rt">√<span>U<sub>∞</sub>/νx</span></span>, &nbsp; u/U<sub>∞</sub> = f′(η), &nbsp; f‴ + ½ f f″ = 0</div>
+            <p>η is the similarity variable. The boundary conditions are f(0) = f′(0) = 0 (no slip at the wall) and f′ → 1 far from the wall (free stream). So the speed starts at zero at the plate and rises to 0.99 U<sub>∞</sub> at η ≈ 4.91.</p>
+            <p>The simulation solves this equation with RK4 and uses f′(η) for every laminar velocity profile.</p>
+          </div>
+          <div>
+            <h3>One-seventh-power law · turbulent boundary layer</h3>
+            <div class="eqn"><span class="fr"><span>u</span><span>U<sub>∞</sub></span></span> = (<span class="fr"><span>y</span><span>δ</span></span>)<sup>1/7</sup> &nbsp; for y ≤ δ</div>
+            <p>u = local speed, U<sub>∞</sub> = free-stream speed, y = distance from the wall, δ = turbulent boundary-layer thickness.</p>
+            <p>An <strong class="kw">empirical approximation</strong>, fitted to measured profiles over smooth surfaces. It gives a <strong class="kw">fuller profile</strong> than the laminar one: speed rises steeply near the wall and changes slowly further out. This makes it useful for simple estimates of δ and drag.</p>
+            <p>It is not an exact solution of the turbulent Navier–Stokes equations. It also gives an infinite slope at the wall, so wall shear is taken from a separate friction correlation (C<sub>f,x</sub> = 0.059/Re<sub>x</sub><sup>1/5</sup> in this simulation).</p>
+          </div>
+        </div>
+        <div class="tscroll">
+          <table class="cmp">
+            <thead><tr><th scope="col">Feature</th><th scope="col">Blasius solution</th><th scope="col">One-seventh-power law</th></tr></thead>
+            <tbody>
+              <tr><td>Flow regime</td><td>Laminar</td><td>Turbulent</td></tr>
+              <tr><td>Nature</td><td>Classical similarity solution</td><td>Empirical approximation</td></tr>
+              <tr><td>Velocity profile</td><td>Derived from the boundary-layer equations</td><td>Power-law representation</td></tr>
+              <tr><td>Application</td><td>Laminar flat-plate boundary layer</td><td>Approximate turbulent flat-plate boundary layer</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card th q4">
+        <h2>E · Laminar and turbulent flow</h2>
+        <p><strong class="kw">Laminar</strong> layers flow in smooth sheets. Momentum moves across the layer only by viscosity, so the layer stays thin: δ grows with x<sup>1/2</sup>.</p>
+        <p><strong class="kw">Turbulent</strong> layers mix strongly. Fast fluid is carried toward the wall, so the profile is fuller, the layer grows faster (about x<sup>4/5</sup>) and the wall shear stress is higher.</p>
+        <p><strong class="kw">Transition</strong> starts near a critical Reynolds number. 5×10<sup>5</sup> is a common textbook value, but it is only an approximate criterion. Roughness, free-stream disturbances and vibration can move it lower or higher.</p>
+      </section>
+
+      <section class="card th q4">
+        <h2>F · Assumptions and limitations</h2>
+        <ul>
+          <li>Smooth, flat plate with zero pressure gradient.</li>
+          <li>Steady, incompressible flow.</li>
+          <li>Constant fluid properties at 20 °C.</li>
+          <li>Transition occurs at a single point; turbulent values use empirical correlations.</li>
+          <li>Boundary-layer theory needs δ ≪ x, so results are not reliable at low Re<sub>L</sub>.</li>
+        </ul>
+        <p class="note">Real experiments can differ because of surface roughness, free-stream turbulence, temperature changes and other conditions.</p>
+      </section>
+
+      <section class="card th q4">
+        <h2>G · Applications</h2>
+        <ul>
+          <li>Aircraft wings: skin-friction drag and stall.</li>
+          <li>Ship hulls: frictional resistance.</li>
+          <li>Wind turbine blades.</li>
+          <li>Heat transfer from heated or cooled surfaces.</li>
+          <li>Flow over industrial equipment, ducts and heat exchangers.</li>
+        </ul>
+      </section>
+
+      <section class="card th q4 key">
+        <h2>Key takeaways</h2>
+        <ul>
+          <li>The no-slip condition creates a thin layer where speed rises from 0 to U<sub>∞</sub>.</li>
+          <li>The <strong class="kw">Reynolds number</strong> controls how thick the layer is and whether it is laminar or turbulent.</li>
+          <li>A laminar layer grows with √x; a turbulent layer grows faster and causes more drag.</li>
+          <li>δ<sub>99</sub>, δ* and θ are three different ways to measure the layer, each with its own meaning.</li>
+          <li>The formulas used here are classical or empirical results for ideal conditions.</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+  <footer>
+    <span>CH2104 Fluid Mechanics · Boundary layer over a flat plate · interactive demonstration</span>
+    <span class="credits"><span class="lbl">Made by</span> Kamlesh Choudhary (2501CT08) · Sahil Choudhary (2501CT20)</span>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="script.js"></script>
